@@ -1,6 +1,9 @@
 import { NodeSSH } from 'node-ssh'
 import type { ConfigEnv } from 'vite'
 import pc from 'picocolors'
+import Spin from './spin'
+
+const loading = new Spin()
 
 export type Server = {
   development: Content
@@ -44,18 +47,22 @@ class FileHandler {
       await this.ssh.execCommand(`rm -rf ${serverDir}/*`)
       console.log(pc.green('执行完成'))
     }
-    console.log(pc.blue('开始上传文件'))
+    loading.start(pc.blue('开始上传文件'))
     await this.uploadFiles(this.distPath, serverDir)
     this.ssh.dispose()
   }
 
   async connectServer() {
-    await this.ssh.connect({
-      host: this.server.host,
-      username: this.server.username,
-      password: this.server.password,
-    })
-    console.log(pc.green('服务器连接成功'))
+    try {
+      await this.ssh.connect({
+        host: this.server.host,
+        username: this.server.username,
+        password: this.server.password,
+      })
+      console.log(pc.green('服务器连接成功'))
+    } catch (error) {
+      console.log(pc.red('服务器连接失败' || error))
+    }
   }
 
   async uploadFiles(localPath: string, remotePath: string) {
@@ -64,7 +71,7 @@ class FileHandler {
       concurrency: 10,
     })
 
-    console.log(status ? pc.green('文件上传成功') : pc.red('文件上传失败'))
+    loading.stop(status ? pc.green('文件上传成功') : pc.red('文件上传失败'))
   }
 }
 
